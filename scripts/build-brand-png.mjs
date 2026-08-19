@@ -15,6 +15,10 @@ const jobs = [
   ['vayro-lockup-horizontal-ivory.svg', 'vayro-lockup-horizontal-ivory', [1024, 2048]],
   ['vayro-lockup-stacked.svg', 'vayro-lockup-stacked', [1024]],
   ['vayro-lockup-stacked-ivory.svg', 'vayro-lockup-stacked-ivory', [1024]],
+  ['vayro-logotype.svg', 'vayro-logotype', [1024, 2048]],
+  ['vayro-logotype-ivory.svg', 'vayro-logotype-ivory', [1024, 2048]],
+  ['vayro-logotype-stacked.svg', 'vayro-logotype-stacked', [1024]],
+  ['vayro-logotype-stacked-ivory.svg', 'vayro-logotype-stacked-ivory', [1024]],
   ['vayro-app-icon.svg', 'vayro-app-icon', [180, 192, 512, 1024]],
   ['vayro-app-icon-round.svg', 'vayro-app-icon-round', [512]],
 ];

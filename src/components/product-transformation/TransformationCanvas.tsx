@@ -4,13 +4,15 @@ import { useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { useFrame } from '@react-three/fiber';
 import type { Product } from '@/types';
-import { clamp, mapRange } from '@/lib/utils';
+import { clamp } from '@/lib/utils';
+import { track } from '@/lib/analytics';
 import { useDeviceTier } from '@/hooks/useDeviceTier';
 import { SceneCanvas } from '@/components/three/Canvas';
 import { StudioEnvironment } from '@/components/three/Environment';
 import { JacketModel } from '@/components/three/JacketModel';
 import type { JacketQuality } from '@/components/three/geometry';
 import type { FinishKey } from '@/components/three/materials';
+import { packFromScrollProgress } from './stages';
 
 /* ==========================================================================
    The transformation canvas.
@@ -44,10 +46,14 @@ const PATH = [
 const LOOK_FROM = new THREE.Vector3(0, 0.14, 0);
 const LOOK_TO = new THREE.Vector3(0, 0, 0);
 
-/** Hold on WEAR, fold through the middle, hold on CARRY. */
-export function packFromScroll(progress: number) {
-  return clamp(mapRange(progress, 0.16, 0.82, 0, 1), 0, 1);
-}
+/**
+ * Hold on WEAR, fold through the middle, hold on CARRY.
+ *
+ * The window itself now lives in ./stages as `PACK_WINDOW`, because the six
+ * named states and the control bar have to agree with this mapping exactly.
+ * The name stays here — it is what the rest of the site imports.
+ */
+export const packFromScroll = packFromScrollProgress;
 
 export function TransformationCanvas({
   product,
@@ -76,6 +82,7 @@ export function TransformationCanvas({
           getPackProgress={() => packFromScroll(getProgress())}
           onReady={onReady}
           onProgress={onProgress}
+          onLoad={({ source, ms }) => track('model_load', { productId: product.id, source, ms })}
         />
       </Turntable>
     </SceneCanvas>

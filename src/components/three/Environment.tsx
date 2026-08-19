@@ -4,9 +4,13 @@ import { useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { useFrame } from '@react-three/fiber';
 import { ContactShadows, Environment, Lightformer } from '@react-three/drei';
-import { palette } from '@/lib/design-tokens';
 import { useDeviceTier } from '@/hooks/useDeviceTier';
 import { useTheme } from '@/components/providers/ThemeProvider';
+import {
+  getLightingRig,
+  type LightingPresetName,
+  type LightingScheme,
+} from './lightingPresets';
 
 /* ==========================================================================
    StudioEnvironment — the room the product stands in.
@@ -18,6 +22,10 @@ import { useTheme } from '@/components/providers/ThemeProvider';
 
    Everything reads the active theme. Flip the site to light and the studio
    flips with it — the product does not sit in a dark room on an ivory page.
+
+   The rig itself lives in ./lightingPresets — `studio`, `outdoor`, `night`,
+   each with a light and a dark variant. `studio` is the default and is the
+   rig this file has always drawn, value for value.
    ========================================================================== */
 
 export type StudioEnvironmentProps = {
@@ -35,72 +43,13 @@ export type StudioEnvironmentProps = {
    * in sections that set their own scheme (the hero is night in both themes).
    */
   scheme?: 'light' | 'dark';
-};
-
-type Rig = {
-  key: string;
-  fill: string;
-  rim: string;
-  counterRim: string;
-  sky: string;
-  ground: string;
-  fog: string;
-  shadow: string;
-  ambient: number;
-  keyIntensity: number;
-  fillIntensity: number;
-  rimIntensity: number;
-  counterRimIntensity: number;
-  shadowOpacity: number;
-  particleColor: string;
-  particleOpacity: number;
-};
-
-const RIGS: Record<'dark' | 'light', Rig> = {
-  // The shell colourways run to near-black (Basalt is #1A1C1A) and the dark
-  // ground is #0B0C0B, so there is almost no tonal gap between product and
-  // backdrop. Separation therefore has to come from the edges, not the faces:
-  // the rim is a bright warm bone rather than a dark moss, it runs hot, and a
-  // counter-rim picks up the opposite shoulder. Without this the jacket is
-  // genuinely invisible on the hero.
-  dark: {
-    key: palette.ivory,
-    fill: palette.stone,
-    rim: palette.bone,
-    counterRim: palette.titanium,
-    sky: palette.stone,
-    ground: palette.forest,
-    fog: palette.ink,
-    shadow: '#000000',
-    ambient: 0.66,
-    keyIntensity: 4.7,
-    fillIntensity: 1.2,
-    rimIntensity: 3.4,
-    counterRimIntensity: 1.9,
-    shadowOpacity: 0.62,
-    particleColor: palette.bone,
-    particleOpacity: 0.34,
-  },
-  // Light mode has the opposite problem — plenty of tonal gap — so the rim
-  // stays restrained and the key does the work.
-  light: {
-    key: palette.white,
-    fill: palette.bone,
-    rim: palette.sand,
-    counterRim: palette.stone,
-    sky: palette.white,
-    ground: palette.stone,
-    fog: palette.ivory,
-    shadow: palette.ink,
-    ambient: 0.78,
-    keyIntensity: 2.35,
-    fillIntensity: 0.9,
-    rimIntensity: 0.85,
-    counterRimIntensity: 0.35,
-    shadowOpacity: 0.4,
-    particleColor: palette.slate,
-    particleOpacity: 0.2,
-  },
+  /**
+   * Which room. `studio` is clean product photography and the default — it is
+   * exactly the rig this component drew before presets existed, so passing
+   * nothing changes nothing. `outdoor` is natural daylight, warmer and more
+   * ambient; `night` is cinematic low-key, almost all edge.
+   */
+  preset?: LightingPresetName;
 };
 
 export function StudioEnvironment({
@@ -110,13 +59,15 @@ export function StudioEnvironment({
   intensity = 1,
   shadows,
   scheme,
+  preset = 'studio',
 }: StudioEnvironmentProps) {
-  const { theme } = useTheme();
+  const { resolvedTheme } = useTheme();
   const { tier, settings } = useDeviceTier();
   // Sections that pin their own colour scheme — the hero is always night,
   // whatever the site theme — pass `scheme` so the rig matches the plate the
   // product actually sits on rather than the surrounding page.
-  const rig = RIGS[(scheme ?? theme) === 'light' ? 'light' : 'dark'];
+  const activeScheme: LightingScheme = (scheme ?? resolvedTheme) === 'light' ? 'light' : 'dark';
+  const rig = getLightingRig(preset, activeScheme);
 
   const castShadows = shadows ?? settings.shadows;
   const shadowMap = tier === 'high' ? 2048 : 1024;
@@ -165,13 +116,13 @@ export function StudioEnvironment({
 
       {settings.env === 'studio' ? (
         <Environment resolution={tier === 'high' ? 256 : 128} frames={1} background={false}>
-          <Lightformer form="rect" intensity={2.4} color={rig.key} position={[0, 4.5, 1.4]} rotation={[Math.PI / 2, 0, 0]} scale={[7, 4, 1]} />
-          <Lightformer form="rect" intensity={1.15} color={rig.fill} position={[-4.2, 1.2, 2]} rotation={[0, Math.PI / 2, 0]} scale={[4, 5, 1]} />
-          <Lightformer form="rect" intensity={0.8} color={rig.rim} position={[4.2, 1.6, -1.6]} rotation={[0, -Math.PI / 2, 0]} scale={[4, 5, 1]} />
-          <Lightformer form="ring" intensity={0.55} color={rig.sky} position={[0, 0.4, 6]} scale={4} />
+          <Lightformer form="rect" intensity={2.4 * rig.envIntensity} color={rig.key} position={[0, 4.5, 1.4]} rotation={[Math.PI / 2, 0, 0]} scale={[7, 4, 1]} />
+          <Lightformer form="rect" intensity={1.15 * rig.envIntensity} color={rig.fill} position={[-4.2, 1.2, 2]} rotation={[0, Math.PI / 2, 0]} scale={[4, 5, 1]} />
+          <Lightformer form="rect" intensity={0.8 * rig.envIntensity} color={rig.rim} position={[4.2, 1.6, -1.6]} rotation={[0, -Math.PI / 2, 0]} scale={[4, 5, 1]} />
+          <Lightformer form="ring" intensity={0.55 * rig.envIntensity} color={rig.sky} position={[0, 0.4, 6]} scale={4} />
           <mesh scale={[14, 14, 14]}>
             <sphereGeometry args={[1, 20, 12]} />
-            <meshBasicMaterial color={rig.ground} side={THREE.BackSide} toneMapped={false} />
+            <meshBasicMaterial color={rig.envTint} side={THREE.BackSide} toneMapped={false} />
           </mesh>
         </Environment>
       ) : null}
@@ -195,7 +146,7 @@ export function StudioEnvironment({
           count={particleCount}
           color={rig.particleColor}
           opacity={rig.particleOpacity}
-          additive={theme !== 'light'}
+          additive={activeScheme !== 'light'}
         />
       ) : null}
     </>

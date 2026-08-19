@@ -74,6 +74,71 @@ export function lockupStacked() {
   };
 }
 
+const r = (n) => Math.round(n * 100) / 100;
+
+/* ---------- combination mark ---------- */
+/**
+ * The logotype: the symbol standing in for the V of VAYRO, so the mark and the
+ * word are one form rather than a lockup of two.
+ *
+ * Spacing is deliberate. The gap after the symbol (12) is slightly tighter than
+ * the tracking between the remaining letters (13) because the symbol's
+ * ascending arm is vertical, which leaves more optical air on its right than a
+ * drawn V's diagonal would. Matching the two numbers literally reads as a hole.
+ */
+export const LOGOTYPE_GAP = 12;
+export const LOGOTYPE_TRACK = 13;
+
+export function logotype({ gap = LOGOTYPE_GAP, track = LOGOTYPE_TRACK } = {}) {
+  const bb = SYMBOL.bbox;
+  const symH = bb.y1 - bb.y0;
+  const scale = CAP / symH;
+  const symW = (bb.x1 - bb.x0) * scale;
+
+  const parts = [
+    `<g transform="translate(${r(-bb.x0 * scale)} ${r(-bb.y0 * scale)}) scale(${r(scale)})">`
+    + `<path d="${SYMBOL.d}"/></g>`,
+  ];
+
+  let x = symW + gap;
+  for (const ch of 'AYRO') {
+    const g = GLYPHS[ch];
+    parts.push(`<g transform="translate(${r(x)} 0)"><path d="${g.d}"/></g>`);
+    x += g.w + track;
+  }
+
+  return { inner: parts.join(''), width: r(x - track), height: CAP, symbolWidth: r(symW) };
+}
+
+/** Stacked variant: word set to the exact width of the symbol above it. */
+export function logotypeStacked({ symHeight = CAP * 1.5, gapY = CAP * 0.22 } = {}) {
+  const bb = SYMBOL.bbox;
+  const scale = symHeight / (bb.y1 - bb.y0);
+  const symW = (bb.x1 - bb.x0) * scale;
+
+  let wordW = 0;
+  const glyphs = [];
+  for (const ch of 'VAYRO') {
+    glyphs.push({ ch, x: wordW });
+    wordW += GLYPHS[ch].w + CAP * 0.02;
+  }
+  wordW -= CAP * 0.02;
+  const wordScale = symW / wordW;
+
+  const word = glyphs
+    .map((g) => `<g transform="translate(${r(g.x)} 0)"><path d="${GLYPHS[g.ch].d}"/></g>`)
+    .join('');
+
+  return {
+    inner:
+      `<g transform="translate(${r(-bb.x0 * scale)} ${r(-bb.y0 * scale)}) scale(${r(scale)})">`
+      + `<path d="${SYMBOL.d}"/></g>`
+      + `<g transform="translate(0 ${r(symHeight + gapY)}) scale(${r(wordScale)})">${word}</g>`,
+    width: r(symW),
+    height: r(symHeight + gapY + CAP * wordScale),
+  };
+}
+
 /* ---------- pattern ---------- */
 export function pattern({ size = 120, stroke = 1.6, opacity = 1 } = {}) {
   const rows = [];

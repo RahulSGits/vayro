@@ -10,6 +10,24 @@ export type AnalyticsEvent =
   | { name: '3d_view_started'; props: { productId: string; tier: string } }
   | { name: '3d_interaction'; props: { productId: string; action: 'rotate' | 'zoom' | 'hotspot' | 'variant' | 'reset' | 'fullscreen' } }
   | { name: 'product_transformation_view'; props: { productId: string; progress: number } }
+  | { name: 'ar_session'; props: { productId: string; mode: 'webxr' | 'scene-viewer' | 'quick-look'; action: 'start' | 'place' | 'end' } }
+  /* ------------------------------------------------------------- 3D layer ---
+     `3d_interaction` above stays the coarse funnel event — one name, six
+     actions, easy to count. The four below are the granular signals the 3D
+     layer emits at the source, where the distinction is known rather than
+     inferred: a rotate is a drag or an arrow key, a zoom is a wheel or a
+     second finger. Keep both. The funnel reads one, the 3D work reads the
+     other, and neither has to be reconstructed from the other's shape. */
+  | { name: 'model_load'; props: { productId: string; source: 'glb' | 'procedural'; ms: number } }
+  | { name: '3d_rotate'; props: { productId: string } }
+  | { name: '3d_zoom'; props: { productId: string } }
+  | { name: '3d_hotspot'; props: { productId: string } }
+  /** The shell has begun folding — by scroll or by the control bar. Once per view. */
+  | { name: 'transformation_started'; props: { productId: string } }
+  /** It reached the carry unit. The drop-off between the two is the metric. */
+  | { name: 'transformation_completed'; props: { productId: string } }
+  /** The intent to leave for AR. `ar_session` reports what happened after. */
+  | { name: 'ar_clicked'; props: { productId: string; mode: 'webxr' | 'scene-viewer' | 'quick-look' | 'none' } }
   | { name: 'add_to_cart'; props: { productId: string; variantId: string; quantity: number; value: number; currency: string } }
   | { name: 'remove_from_cart'; props: { productId: string; variantId: string } }
   | { name: 'wishlist_add'; props: { productId: string } }

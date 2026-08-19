@@ -6,20 +6,23 @@ import { t } from '@/lib/motion';
 import { useTheme } from '@/components/providers/ThemeProvider';
 
 /* ==========================================================================
-   ThemeControl — a two-position switch, not a dropdown.
+   ThemeControl — a three-position switch, not a dropdown.
 
-   VAYRO ships two palettes and dark is the default. The choice is stored
-   locally and applied before first paint, so it survives a reload without a
-   flash. Held in a disabled state until the stored preference is known.
+   VAYRO ships two palettes and dark is the default, but the choice is three
+   things: light, dark, or follow the device. The *choice* is stored locally
+   and resolved before first paint, so it survives a reload without a flash —
+   and 'System' keeps tracking the device for the rest of the session. Held in
+   a disabled state until the stored preference is known.
    ========================================================================== */
 
 const OPTIONS = [
   { value: 'dark' as const, label: 'Dark', note: 'The default. Built for the product plates.' },
   { value: 'light' as const, label: 'Light', note: 'Warm ivory. Easier in bright rooms.' },
+  { value: 'system' as const, label: 'System', note: 'Follows your device, including when it switches at dusk.' },
 ];
 
 export function ThemeControl() {
-  const { theme, setTheme, ready } = useTheme();
+  const { theme, resolvedTheme, setTheme, ready } = useTheme();
 
   return (
     <div className="max-w-[28rem]">
@@ -27,7 +30,7 @@ export function ThemeControl() {
         role="radiogroup"
         aria-label="Colour theme"
         aria-busy={!ready}
-        className="relative grid grid-cols-2 border border-[var(--border-strong)]"
+        className="relative grid grid-cols-3 border border-[var(--border-strong)]"
       >
         {OPTIONS.map((option) => {
           const selected = ready && theme === option.value;
@@ -60,9 +63,11 @@ export function ThemeControl() {
       </div>
 
       <p className="t-caption mt-4 text-[var(--fg-subtle)]">
-        {ready
-          ? (OPTIONS.find((option) => option.value === theme)?.note ?? '')
-          : 'Reading your saved preference…'}
+        {!ready
+          ? 'Reading your saved preference…'
+          : theme === 'system'
+            ? `Follows your device, currently ${resolvedTheme}.`
+            : (OPTIONS.find((option) => option.value === theme)?.note ?? '')}
       </p>
     </div>
   );

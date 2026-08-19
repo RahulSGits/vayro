@@ -225,3 +225,128 @@ three modes through the motion table.
 - [ ] Decoders copied to `public/draco/` if compressed
 - [ ] Hero, product viewer and the transformation section all checked after the
       swap — all three read the same file
+
+---
+
+# Augmented reality
+
+The AR layer lives in `src/components/ar/` and the landing page it feeds is
+`/ar/[slug]`. It never invents capability: `detectAR()` measures the device and
+`ARProductLauncher` HEAD-requests the asset, and if either answer is no the
+reader is offered the 3D viewer instead of a button that would fail.
+
+That means **AR is dark until a file lands in this directory.** The catalogue
+declares `/models/meridian-shell.glb` with `placeholder: true`, and the probe
+correctly reports it missing.
+
+## The three runtimes
+
+| Route | Device | Asset it consumes | Who renders |
+| --- | --- | --- | --- |
+| WebXR | Android Chrome, and any browser whose `navigator.xr` reports `immersive-ar` | `meridian-shell.glb` | **We do** — `WebXRExperience` draws the same R3F scene the product page runs |
+| Scene Viewer | Android, Chromium | `meridian-shell.glb` | Google Scene Viewer, over an `intent://` hand-off arranged by `<model-viewer>` |
+| Quick Look | iOS / iPadOS, all browsers (they are all WebKit) | `meridian-shell.usdz` | AR Quick Look, over `<a rel="ar">` |
+
+The GLB is the only required file. `<model-viewer>` will derive a USDZ from it
+at runtime when `meridian-shell.usdz` is absent, which works but costs the
+reader a conversion on the device and loses anything the exporter cannot carry.
+Ship the pair.
+
+## The GLB/USDZ pairing
+
+Both files describe the same product and must stay in step. The launcher looks
+for the USDZ by swapping the extension, so the names are not free:
+
+```
+public/models/
+  meridian-shell.glb     required — WebXR + Scene Viewer + the site's own viewer
+  meridian-shell.usdz    optional but strongly preferred — Quick Look
+```
+
+Export the GLB first, to the specification above in this file, then convert:
+
+```bash
+# From the finished GLB, with three's USDZ exporter (already a dependency)
+npx @gltf-transform/cli inspect meridian-shell.glb     # confirm before converting
+
+# Or author the USDZ directly in Reality Composer / usdzconvert and check it
+# against the GLB rather than against the render.
+```
+
+Whichever route, verify the USDZ on a real iPhone before committing it. Quick
+Look is silent about problems: a file it dislikes simply does not open.
+
+Checklist for the pair:
+
+- [ ] Same geometry, same colourway, same hardware
+- [ ] Both under 8 MB — Quick Look downloads the whole file before it opens
+- [ ] USDZ authored in **metres** (see below), because Quick Look ignores any
+      scale the page asks for
+- [ ] Opened on an actual iPhone and an actual Android handset
+
+## Real-world scale
+
+AR is measured in metres. The viewer's model is measured in its own units, and
+the conversion between the two is pinned — not chosen — by the carry box in
+`src/components/three/geometry.ts`. Its half extents are the catalogue's
+published packed size expressed in model units:
+
+| Axis | Catalogue | Carry box | Metres per unit |
+| --- | --- | --- | --- |
+| Width | 24 cm | 2 × 0.3000 u | 0.40 |
+| Height | 16 cm | 2 × 0.2000 u | 0.40 |
+| Depth | 9 cm | 2 × 0.1125 u | 0.40 |
+
+Three axes, one answer: **1 model unit = 0.40 m**. That is the number
+`src/components/ar/ar-scale.ts` exports as `METRES_PER_UNIT`, and it is what
+`<model-viewer scale>` and the WebXR placement group are both set from. At that
+scale the shell stands 0.84 m from hood crown to hem, and the packed unit
+measures exactly what the specification table says it measures — which is the
+only claim AR is really being asked to prove.
+
+Note that the header comment in `geometry.ts` describes model space as
+"1 unit ~= 62 cm". The carry box is the figure that can be checked against a
+published dimension, so the AR layer follows the carry box. If a real export
+changes either, change both together.
+
+### If you author the GLB in metres instead
+
+glTF's own convention is metres, and a scanned or CAD-derived asset will
+usually arrive that way. That is fine and it is the better long-term shape:
+
+- Keep the node names, the anchors and the `pack` morph target as specified.
+- Set `metresPerUnit` to `1` for that product by publishing a `Packed size`
+  spec that agrees with the model, or pass an explicit scale.
+- `ar-scale="fixed"` stays. A reader must not be able to pinch the product
+  larger than it is.
+
+USDZ is always metres, with **+Y up**, and Quick Look places it on the floor
+from the model origin. Export the USDZ with its origin at the hem, not at the
+mid-chest origin the GLB uses — the WebXR path lifts the model by
+`groundOffsetMetres()` to compensate, and Quick Look has no such hook.
+
+## Permissions-Policy
+
+`next.config.ts` currently sends `Permissions-Policy: xr-spatial-tracking=()`,
+which disables WebXR at the document level for the whole origin. The detector
+reads the policy back and reports it as the reason, so the site degrades
+correctly to Scene Viewer and Quick Look — but the WebXR path cannot run until
+that directive allows `self`:
+
+```
+xr-spatial-tracking=(self)
+```
+
+Scene Viewer and Quick Look are unaffected: both hand off to a native app and
+neither touches a web API the policy governs.
+
+## What to check after an asset lands
+
+- [ ] `/ar/meridian-carry-shell` shows the AR button rather than the note
+- [ ] Android: the button opens Scene Viewer, and the product is life size
+- [ ] iOS: the button opens Quick Look, and the product is life size
+- [ ] WebXR (once the policy allows it): the reticle finds a floor, a tap
+      places the shell, Reset picks it up, Exit ends the session cleanly
+- [ ] The packed unit measures 24 × 16 × 9 cm against a real tape measure
+- [ ] Hero, product viewer, transformation section and AR all still agree —
+      they read the same file

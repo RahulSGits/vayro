@@ -2,12 +2,12 @@
 
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Canvas, useThree, type RootState } from '@react-three/fiber';
-import { AdaptiveDpr } from '@react-three/drei';
 import * as THREE from 'three';
 import { three as threeTokens } from '@/lib/design-tokens';
 import { useDeviceTier } from '@/hooks/useDeviceTier';
 import { cn } from '@/lib/utils';
 import { SceneErrorBoundary } from './SceneErrorBoundary';
+import { AdaptiveResolution, registerRenderer } from './optimization';
 
 /* ==========================================================================
    SceneCanvas — the single entry point to WebGL on this site.
@@ -71,6 +71,8 @@ export function SceneCanvas({
       state.gl.setClearAlpha(0);
       state.gl.toneMapping = THREE.ACESFilmicToneMapping;
       state.gl.toneMappingExposure = 1.02;
+      // KTX2 has to ask this renderer which compressed formats the GPU takes.
+      registerRenderer(state.gl);
 
       const lost = (event: Event) => {
         // Preventing the default is what allows the browser to restore it.
@@ -135,7 +137,9 @@ export function SceneCanvas({
           onCreated={handleCreated}
         >
           <Suspense fallback={null}>{children}</Suspense>
-          {tier !== 'high' ? <AdaptiveDpr pixelated={false} /> : null}
+          {/* Resolution answers to the measured frame, not to the tier guess.
+              The tier still sets the ceiling; this only ever spends less. */}
+          <AdaptiveResolution min={threeTokens.dpr.min} max={settings.dpr} />
         </Canvas>
       </SceneErrorBoundary>
 

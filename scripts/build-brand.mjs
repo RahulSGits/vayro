@@ -23,6 +23,13 @@ files.push(w('vayro-lockup-horizontal-ivory.svg', B.svg(lh.width, lh.height, lh.
 files.push(w('vayro-lockup-stacked.svg',          B.svg(ls.width, ls.height, ls.inner, { fill: ink })));
 files.push(w('vayro-lockup-stacked-ivory.svg',    B.svg(ls.width, ls.height, ls.inner, { fill: ivory })));
 
+/* combination mark — the symbol standing in for the V of VAYRO */
+const lt = B.logotype(), lts = B.logotypeStacked();
+files.push(w('vayro-logotype.svg',        B.svg(lt.width, lt.height, lt.inner, { fill: ink })));
+files.push(w('vayro-logotype-ivory.svg',  B.svg(lt.width, lt.height, lt.inner, { fill: ivory })));
+files.push(w('vayro-logotype-stacked.svg',       B.svg(lts.width, lts.height, lts.inner, { fill: ink })));
+files.push(w('vayro-logotype-stacked-ivory.svg', B.svg(lts.width, lts.height, lts.inner, { fill: ivory })));
+
 /* app icon / monogram tile — ink field, ivory mark, 22% optical padding */
 const tile = (bg, fg, radius = 0) =>
   `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">`
@@ -74,6 +81,23 @@ export const LOCKUP_GAP_RATIO = 0.46;
 export const CLEAR_SPACE_RATIO = 0.28;
 
 /** Contour pattern tile. */
+/** Combination mark: the symbol substituted for the V of VAYRO. */
+export const LOGOTYPE = ${JSON.stringify({
+  inner: B.logotype().inner,
+  width: B.logotype().width,
+  height: B.logotype().height,
+})};
+
+export const LOGOTYPE_STACKED = ${JSON.stringify({
+  inner: B.logotypeStacked().inner,
+  width: B.logotypeStacked().width,
+  height: B.logotypeStacked().height,
+})};
+
+/** Spacing the logotype is drawn at. Documented in the guidelines. */
+export const LOGOTYPE_GAP = ${B.LOGOTYPE_GAP};
+export const LOGOTYPE_TRACK = ${B.LOGOTYPE_TRACK};
+
 export const PATTERN_TILE = ${B.pattern({ size: 120 }).size};
 export const PATTERN_PATH = ${JSON.stringify(B.pattern({ size: 120 }).d)};
 `);

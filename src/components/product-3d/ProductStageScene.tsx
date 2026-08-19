@@ -4,6 +4,7 @@ import { useRef, type ReactNode } from 'react';
 import * as THREE from 'three';
 import { useFrame, useThree } from '@react-three/fiber';
 import { three as threeTokens } from '@/lib/design-tokens';
+import { track } from '@/lib/analytics';
 import { useDeviceTier } from '@/hooks/useDeviceTier';
 import type { Product } from '@/types';
 import { SceneCanvas } from '@/components/three/Canvas';
@@ -54,6 +55,9 @@ export function ProductStageScene({
           quality={quality}
           onReady={onReady}
           onProgress={onProgress}
+          // The hero is where most first loads happen — it is the one place
+          // where `model_load` timings describe the real arrival experience.
+          onLoad={({ source, ms }) => track('model_load', { productId: product.id, source, ms })}
         />
       </HeroRig>
     </SceneCanvas>

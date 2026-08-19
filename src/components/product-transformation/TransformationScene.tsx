@@ -11,6 +11,12 @@ import { track } from '@/lib/analytics';
 import { useDeviceTier } from '@/hooks/useDeviceTier';
 import type { FinishKey } from '@/components/three/materials';
 import { resolveProduct } from '@/components/product-3d/product-source';
+import {
+  TRANSFORMATION_STATES,
+  packFromScrollProgress,
+  stageIndexAtPack,
+  type TransformationTimeline,
+} from './stages';
 
 /* ==========================================================================
    TransformationScene — WEAR to PACK to CARRY, driven by the scroll.
@@ -85,6 +91,16 @@ export type TransformationSceneProps = {
   finish?: FinishKey;
   /** Draws the stage read-out over the canvas. Off when the page owns copy. */
   captions?: boolean;
+  /**
+   * The shared progress value, from `createTransformationTimeline()`. Hand the
+   * same one to `<TransformationControls />` and the buttons and the scroll
+   * drive the identical fold — the scroll reports into it, the buttons write
+   * to it, and this scene reads it back every frame.
+   *
+   * Omit it and the scene keeps its own private value and stays scroll-only,
+   * which is what every existing caller does.
+   */
+  timeline?: TransformationTimeline;
 };
 
 export function TransformationScene({
@@ -94,6 +110,7 @@ export function TransformationScene({
   colorway,
   finish,
   captions = false,
+  timeline,
 }: TransformationSceneProps) {
   const product = useMemo(() => resolveProduct(productSlug, provided), [productSlug, provided]);
   const { pending, webgl, tier, reducedMotion } = useDeviceTier();
@@ -107,6 +124,26 @@ export function TransformationScene({
 
   const use3D = !pending && webgl && tier !== 'low' && !reducedMotion;
 
+  /* The fold has begun / the fold reached the carry unit. Fired once per view
+     from whichever input got there — the dedupe set is what keeps the scroll
+     and the control bar from reporting the same crossing twice. Both paths
+     decide from the named state rather than a bare number, so a milestone
+     means the same instant however the shell was driven there. */
+  const foldRef = useRef<Set<string>>(new Set());
+  const emitStage = useCallback(
+    (index: number) => {
+      if (index >= 1 && !foldRef.current.has('started')) {
+        foldRef.current.add('started');
+        track('transformation_started', { productId: product.id });
+      }
+      if (index >= TRANSFORMATION_STATES.length - 1 && !foldRef.current.has('completed')) {
+        foldRef.current.add('completed');
+        track('transformation_completed', { productId: product.id });
+      }
+    },
+    [product.id],
+  );
+
   const report = useCallback(
     (progress: number) => {
       for (const milestone of MILESTONES) {
@@ -117,11 +154,34 @@ export function TransformationScene({
           progress: Math.round(milestone * 100),
         });
       }
+      emitStage(stageIndexAtPack(packFromScrollProgress(progress)));
     },
-    [product.id],
+    [product.id, emitStage],
   );
 
-  const getProgress = useCallback(() => progressRef.current, []);
+  // With a timeline the shared value is the truth; without one the scene keeps
+  // its own. Either way the canvas asks the same question every frame.
+  const getProgress = useCallback(
+    () => (timeline ? timeline.progress() : progressRef.current),
+    [timeline],
+  );
+
+  /* A control-bar run never touches ScrollTrigger, so the caption read-out and
+     the fold milestones have to hear about it from the timeline instead. */
+  useEffect(() => {
+    if (!timeline) return;
+    const sync = (index: number, progress: number) => {
+      emitStage(index);
+      const next = Math.min(
+        TRANSFORMATION_STAGES.length - 1,
+        Math.floor(progress * TRANSFORMATION_STAGES.length),
+      );
+      setStage((current) => (current === next ? current : next));
+    };
+    const initial = timeline.snapshot();
+    sync(initial.index, initial.progress);
+    return timeline.subscribe((snapshot) => sync(snapshot.index, snapshot.progress));
+  }, [timeline, emitStage]);
 
   /* ------------------------------------------------- scroll binding (3D) */
   useEffect(() => {
@@ -166,12 +226,15 @@ export function TransformationScene({
         },
         onUpdate: () => {
           progressRef.current = proxy.value;
+          // The timeline decides whether to accept this — a control run in
+          // flight holds it off until the page has genuinely travelled.
+          timeline?.setFromScroll(proxy.value);
         },
       });
     }, element);
 
     return () => context.revert();
-  }, [use3D, report]);
+  }, [use3D, report, timeline]);
 
   /* ------------------------------- keep the canvas mounted only near view */
   useEffect(() => {

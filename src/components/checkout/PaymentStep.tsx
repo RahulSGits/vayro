@@ -86,7 +86,7 @@ export function PaymentStep({
   onBack,
   onContinue,
 }: PaymentStepProps) {
-  const { theme } = useTheme();
+  const { resolvedTheme } = useTheme();
   const mode: PaymentMode = hasStripe ? 'stripe' : 'demo';
 
   const [status, setStatus] = useState<PaymentStatus>(hasStripe ? 'idle' : 'unconfigured');
@@ -165,7 +165,7 @@ export function PaymentStep({
 
       const elements = stripe.elements({
         clientSecret,
-        appearance: buildAppearance(theme),
+        appearance: buildAppearance(resolvedTheme),
         loader: 'auto',
       });
 
@@ -195,7 +195,7 @@ export function PaymentStep({
     // Rebuilding on theme change is deliberate: appearance is baked in at
     // creation time and the frame cannot read our CSS variables.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [clientSecret, theme]);
+  }, [clientSecret, resolvedTheme]);
 
   /* Billing scope changes only need an update, not a rebuild. */
   useEffect(() => {

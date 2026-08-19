@@ -104,6 +104,12 @@ export function ProductViewerScene({
       if (now - (lastTracked.current[action] ?? 0) < 900) return;
       lastTracked.current[action] = now;
       track('3d_interaction', { productId: product.id, action });
+
+      // The granular half of the taxonomy, emitted from the one place that
+      // knows which gesture it was. Same throttle, so the two counts agree.
+      if (action === 'rotate') track('3d_rotate', { productId: product.id });
+      else if (action === 'zoom') track('3d_zoom', { productId: product.id });
+      else if (action === 'hotspot') track('3d_hotspot', { productId: product.id });
     },
     [product.id],
   );
@@ -273,6 +279,9 @@ export function ProductViewerScene({
               renderAnchor={renderAnchor}
               onProgress={setBuildProgress}
               onReady={() => setReady(true)}
+              onLoad={({ source, ms }) =>
+                track('model_load', { productId: product.id, source, ms })
+              }
             />
           </ViewerRig>
           <InvalidateOnChange

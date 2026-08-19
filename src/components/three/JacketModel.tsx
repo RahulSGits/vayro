@@ -78,9 +78,28 @@ export type JacketModelProps = {
   /** 0..1 across the staged build. Drives the branded loader. */
   onProgress?: (value: number) => void;
   onReady?: () => void;
+  /**
+   * Fires once per source when the shell is actually on screen, with where it
+   * came from and how long it took from mount. This is what the `model_load`
+   * analytics event is made of, and the model is the only place that honestly
+   * knows which of the two sources won — a caller sees one component either
+   * way. Where the GLB takes over from the procedural fallback both are
+   * reported, in that order, because both were genuinely built and shown.
+   */
+  onLoad?: (info: JacketLoadInfo) => void;
   /** Pass null to force the procedural shell. */
   modelUrl?: string | null;
 };
+
+export type JacketModelSource = 'glb' | 'procedural';
+
+export type JacketLoadInfo = {
+  source: JacketModelSource;
+  /** Milliseconds from the model mounting to this source being ready. */
+  ms: number;
+};
+
+const now = () => (typeof performance === 'undefined' ? Date.now() : performance.now());
 
 type PartNode = {
   key: string;
@@ -180,6 +199,7 @@ export function JacketModel({
   onAnchors,
   onProgress,
   onReady,
+  onLoad,
   modelUrl,
 }: JacketModelProps) {
   const rootRef = useRef<THREE.Group>(null);
@@ -203,6 +223,26 @@ export function JacketModel({
   useEffect(() => {
     anchorCallback.current = onAnchors;
   }, [onAnchors]);
+
+  /* The load clock starts at first render, not in an effect — an effect runs
+     after the staged build has already begun and would under-report. Lazy
+     state rather than a ref, because a ref written during render is a lie
+     about when it was written. */
+  const [mountedAt] = useState(now);
+  const reported = useRef<Set<JacketModelSource>>(new Set());
+  const readyCallback = useRef(onReady);
+  const loadCallback = useRef(onLoad);
+  useEffect(() => {
+    readyCallback.current = onReady;
+    loadCallback.current = onLoad;
+  }, [onReady, onLoad]);
+
+  const handleReady = useCallback((source: JacketModelSource) => {
+    readyCallback.current?.();
+    if (reported.current.has(source)) return;
+    reported.current.add(source);
+    loadCallback.current?.({ source, ms: Math.round(now() - mountedAt) });
+  }, [mountedAt]);
 
   /* Anchors are reported once the graph exists so overlays can attach to them. */
   useLayoutEffect(() => {
@@ -292,19 +332,22 @@ export function JacketModel({
     packUniforms,
     onNodes: handleNodes,
     onProgress,
-    onReady,
   };
+
+  // Each branch reports under its own name, so `model_load` says which source
+  // the reader actually got rather than which one was asked for.
+  const procedural = <ProceduralShell {...shellProps} onReady={() => handleReady('procedural')} />;
 
   return (
     <group ref={rootRef} name="meridian-shell">
       {glbAvailable ? (
-        <SceneErrorBoundary fallback={<ProceduralShell {...shellProps} />}>
-          <Suspense fallback={<ProceduralShell {...shellProps} />}>
-            <GLBShell {...shellProps} url={url} />
+        <SceneErrorBoundary fallback={procedural}>
+          <Suspense fallback={procedural}>
+            <GLBShell {...shellProps} url={url} onReady={() => handleReady('glb')} />
           </Suspense>
         </SceneErrorBoundary>
       ) : (
-        <ProceduralShell {...shellProps} />
+        procedural
       )}
 
       <group ref={anchorGroupRef} name="anchors">
