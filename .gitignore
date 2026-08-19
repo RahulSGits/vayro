@@ -32,6 +32,9 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+# ...but the template carries no secrets and README, ENVIRONMENT.md and
+# DEPLOYMENT.md all instruct you to copy it. It has to ship.
+!.env.example
 
 # vercel
 .vercel
