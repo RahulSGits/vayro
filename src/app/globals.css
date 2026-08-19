@@ -1,26 +1,248 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/* ==========================================================================
+   VAYRO — global stylesheet
+   Mirrors src/lib/design-tokens.ts. Tokens are declared once on :root (light),
+   then redefined for dark. Components consume var(--*) only.
+   ========================================================================== */
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-bg: var(--bg);
+  --color-bg-elevated: var(--bg-elevated);
+  --color-bg-sunken: var(--bg-sunken);
+  --color-bg-inverse: var(--bg-inverse);
+  --color-fg: var(--fg);
+  --color-fg-muted: var(--fg-muted);
+  --color-fg-subtle: var(--fg-subtle);
+  --color-fg-inverse: var(--fg-inverse);
+  --color-line: var(--border);
+  --color-line-strong: var(--border-strong);
+  --color-accent: var(--accent);
+  --color-accent-fg: var(--accent-fg);
+
+  --breakpoint-sm: 30rem;
+  --breakpoint-md: 48rem;
+  --breakpoint-lg: 64rem;
+  --breakpoint-xl: 80rem;
+  --breakpoint-2xl: 96rem;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+:root {
+  color-scheme: light;
+
+  /* palette */
+  --ink: #0B0C0B;      --ink-80: #1A1C1A;   --ink-60: #2A2D2B;
+  --graphite: #3A3E3C; --slate: #5C6360;    --titanium: #8C9195;
+  --stone: #B9B2A5;    --sand: #D8D0C0;     --bone: #EAE5DB;
+  --ivory: #F4F1EA;    --white: #FBFAF7;
+  --forest: #1E2C25;   --olive: #3D4536;    --moss: #5A6350;
+  --signal: #C4501E;   --positive: #2F6B4F; --warning: #8A6A1F; --danger: #9B2C20;
+
+  /* semantic — light */
+  --bg: var(--ivory);
+  --bg-elevated: var(--white);
+  --bg-sunken: var(--bone);
+  --bg-inverse: var(--ink);
+  --fg: var(--ink);
+  --fg-muted: var(--slate);
+  --fg-subtle: var(--titanium);
+  --fg-inverse: var(--ivory);
+  --border: rgba(11, 12, 11, 0.12);
+  --border-strong: rgba(11, 12, 11, 0.26);
+  --accent: var(--forest);
+  --accent-fg: var(--ivory);
+  --overlay: rgba(11, 12, 11, 0.44);
+  --scrim: linear-gradient(180deg, rgba(11,12,11,0) 0%, rgba(11,12,11,0.55) 100%);
+
+  /* layout */
+  --max-w: 90rem;
+  --max-text: 38rem;
+  --gutter: clamp(1.25rem, 4vw, 3.5rem);
+  --header-h: 4.5rem;
+  --section: clamp(4.5rem, 9vw, 8rem);
+  --section-tight: clamp(3rem, 6vw, 5rem);
+  --section-loose: clamp(6rem, 13vw, 12rem);
+
+  /* radii + elevation */
+  --r-xs: 2px; --r-sm: 3px; --r-md: 4px; --r-lg: 6px; --r-pill: 999px;
+  --sh-sm: 0 1px 2px rgba(11,12,11,.06), 0 1px 1px rgba(11,12,11,.04);
+  --sh-md: 0 4px 16px rgba(11,12,11,.08), 0 1px 2px rgba(11,12,11,.05);
+  --sh-lg: 0 12px 40px rgba(11,12,11,.12), 0 2px 6px rgba(11,12,11,.06);
+  --sh-xl: 0 28px 80px rgba(11,12,11,.18), 0 4px 12px rgba(11,12,11,.08);
+
+  /* motion */
+  --d-instant: 90ms; --d-fast: 160ms; --d-standard: 340ms;
+  --d-slow: 520ms;   --d-cine: 900ms; --d-epic: 1200ms;
+  --e-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --e-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --e-in: cubic-bezier(0.5, 0, 0.75, 0);
+  --e-fold: cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: var(--ink);
+  --bg-elevated: var(--ink-80);
+  --bg-sunken: #060706;
+  --bg-inverse: var(--ivory);
+  --fg: var(--ivory);
+  --fg-muted: var(--stone);
+  --fg-subtle: var(--titanium);
+  --fg-inverse: var(--ink);
+  --border: rgba(244, 241, 234, 0.14);
+  --border-strong: rgba(244, 241, 234, 0.30);
+  --accent: var(--bone);
+  --accent-fg: var(--ink);
+  --overlay: rgba(6, 7, 6, 0.62);
+  --scrim: linear-gradient(180deg, rgba(6,7,6,0) 0%, rgba(6,7,6,0.72) 100%);
+  --sh-sm: 0 1px 2px rgba(0,0,0,.5);
+  --sh-md: 0 4px 18px rgba(0,0,0,.55);
+  --sh-lg: 0 14px 44px rgba(0,0,0,.6);
+  --sh-xl: 0 30px 90px rgba(0,0,0,.7);
+}
+
+/* Inverted regions inside a light page (and vice-versa) get the full flip. */
+[data-surface="inverse"] {
+  --bg: var(--ink); --bg-elevated: var(--ink-80); --bg-sunken: #060706;
+  --fg: var(--ivory); --fg-muted: var(--stone); --fg-subtle: var(--titanium);
+  --border: rgba(244,241,234,.14); --border-strong: rgba(244,241,234,.30);
+  --accent: var(--bone); --accent-fg: var(--ink);
+  background: var(--bg); color: var(--fg); color-scheme: dark;
+}
+:root[data-theme="dark"] [data-surface="inverse"] {
+  --bg: var(--ivory); --bg-elevated: var(--white); --bg-sunken: var(--bone);
+  --fg: var(--ink); --fg-muted: var(--slate); --fg-subtle: var(--titanium);
+  --border: rgba(11,12,11,.12); --border-strong: rgba(11,12,11,.26);
+  --accent: var(--forest); --accent-fg: var(--ivory);
+  color-scheme: light;
+}
+
+/* ------------------------------------------------------------------ reset */
+/* Layered as `base` on purpose. Tailwind v4 emits utilities inside
+   `@layer utilities`, and unlayered author CSS outranks every layer — an
+   unlayered reset would beat `mt-*`, `border`, `bg-*` and `underline`
+   everywhere. Sitting in `base` keeps the reset above the browser default
+   and below the utilities, which is where a reset belongs. */
+@layer base {
+  *, *::before, *::after { box-sizing: border-box; }
+  * { margin: 0; }
+  html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; scroll-behavior: smooth; }
+  html:focus-within { scroll-padding-top: calc(var(--header-h) + 1rem); }
+
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+    font-size: 0.9375rem;
+    line-height: 1.66;
+    letter-spacing: -0.004em;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-synthesis-weight: none;
+    text-rendering: optimizeLegibility;
+    overflow-x: hidden;
+    transition: background-color var(--d-standard) var(--e-out),
+                color var(--d-standard) var(--e-out);
+  }
+
+  img, svg, video, canvas { display: block; max-width: 100%; }
+  img, video { height: auto; }
+  input, button, textarea, select { font: inherit; color: inherit; }
+  button { background: none; border: 0; padding: 0; cursor: pointer; }
+  a { color: inherit; text-decoration: none; }
+  p, h1, h2, h3, h4, h5, h6 { overflow-wrap: break-word; }
+  ul, ol { list-style: none; padding: 0; }
+  table { border-collapse: collapse; }
+}
+
+/* --------------------------------------------------------------- a11y */
+:where(a, button, input, textarea, select, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--fg);
+  outline-offset: 3px;
+  border-radius: var(--r-xs);
+}
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap;
+}
+.skip-link {
+  position: fixed; top: 0; left: 50%; transform: translate(-50%, -110%);
+  z-index: 999; background: var(--fg); color: var(--bg);
+  padding: 0.75rem 1.25rem; font-size: 0.6875rem; letter-spacing: 0.22em;
+  text-transform: uppercase; transition: transform var(--d-fast) var(--e-out);
+}
+.skip-link:focus { transform: translate(-50%, 0); }
+
+/* --------------------------------------------------------- type helpers */
+.t-display-xl { font-family: var(--font-display); font-size: clamp(3.4rem, 11vw, 9.5rem); line-height: .88; letter-spacing: -.04em; font-weight: 500; }
+.t-display-lg { font-family: var(--font-display); font-size: clamp(2.6rem, 7.5vw, 6rem); line-height: .92; letter-spacing: -.035em; font-weight: 500; }
+.t-display-md { font-family: var(--font-display); font-size: clamp(2rem, 4.6vw, 3.5rem); line-height: .98; letter-spacing: -.03em; font-weight: 500; }
+.t-h1 { font-family: var(--font-display); font-size: clamp(1.9rem, 3.6vw, 2.75rem); line-height: 1.06; letter-spacing: -.025em; font-weight: 500; }
+.t-h2 { font-family: var(--font-display); font-size: clamp(1.5rem, 2.6vw, 2rem); line-height: 1.12; letter-spacing: -.02em; font-weight: 500; }
+.t-h3 { font-size: clamp(1.15rem, 1.7vw, 1.375rem); line-height: 1.24; letter-spacing: -.012em; font-weight: 500; }
+.t-body-lg { font-size: 1.0625rem; line-height: 1.62; letter-spacing: -.006em; }
+.t-body-sm { font-size: .8125rem; line-height: 1.6; }
+.t-label { font-size: .6875rem; line-height: 1.1; letter-spacing: .22em; text-transform: uppercase; font-weight: 500; }
+.t-label-sm { font-size: .625rem; line-height: 1.1; letter-spacing: .26em; text-transform: uppercase; font-weight: 500; }
+.t-caption { font-size: .75rem; line-height: 1.45; }
+.t-spec { font-family: var(--font-mono); font-size: .75rem; line-height: 1.5; letter-spacing: .06em; font-variant-numeric: tabular-nums; }
+.t-price { font-size: 1.0625rem; line-height: 1.2; letter-spacing: -.01em; font-weight: 500; font-variant-numeric: tabular-nums; }
+.t-price-lg { font-family: var(--font-display); font-size: 1.5rem; line-height: 1.1; letter-spacing: -.02em; font-weight: 500; font-variant-numeric: tabular-nums; }
+.t-balance { text-wrap: balance; }
+.t-pretty { text-wrap: pretty; }
+
+/* ------------------------------------------------------------ primitives */
+.shell { width: 100%; max-width: var(--max-w); margin-inline: auto; padding-inline: var(--gutter); }
+.shell-wide { width: 100%; padding-inline: var(--gutter); }
+.section { padding-block: var(--section); }
+.section-tight { padding-block: var(--section-tight); }
+.section-loose { padding-block: var(--section-loose); }
+.rule { height: 1px; background: var(--border); border: 0; }
+
+/* Hairline grid used across editorial sections. */
+.grid-12 { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: var(--gutter); }
+@media (max-width: 767px) { .grid-12 { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+
+/* Contour pattern — the brand's ambient texture. Always very low contrast. */
+.contour {
+  background-image: repeating-linear-gradient(
+    115deg, transparent 0 22px, color-mix(in srgb, var(--fg) 6%, transparent) 22px 23px);
+}
+
+/* Masked reveal used by headline animations when JS is unavailable. */
+.clip-reveal { clip-path: inset(0 0 0 0); }
+
+/* Custom cursor takes over on precise pointers only. */
+@media (hover: hover) and (pointer: fine) {
+  html[data-cursor="on"], html[data-cursor="on"] * { cursor: none !important; }
+}
+
+/* ----------------------------------------------------- reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* Suppress theme-transition flash while the toggle swaps tokens. */
+.theme-switching *, .theme-switching *::before, .theme-switching *::after {
+  transition: background-color var(--d-standard) var(--e-out),
+              border-color var(--d-standard) var(--e-out),
+              color var(--d-standard) var(--e-out) !important;
 }
+
+::selection { background: var(--fg); color: var(--bg); }
+
+/* Scrollbar — quiet, matches surface. */
+@supports selector(::-webkit-scrollbar) {
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border-strong); border: 3px solid var(--bg); border-radius: var(--r-pill); }
+  ::-webkit-scrollbar-thumb:hover { background: var(--fg-subtle); }
+}
+
+@keyframes shimmer { 100% { transform: translateX(100%); } }

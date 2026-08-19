@@ -39,3 +39,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local brand lab / preview artefacts
+.brand-lab/
+_identity-preview.html
